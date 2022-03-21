@@ -6,8 +6,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.AudioSource;
@@ -41,6 +39,8 @@ import org.webrtc.VideoTrack;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class CallActivity extends AppCompatActivity {
 
@@ -474,10 +474,10 @@ public class CallActivity extends AppCompatActivity {
             mState = "joined";
 
             //这里应该创建PeerConnection
-//            if (mPeerConnection == null) {
-//                mPeerConnection = createPeerConnection();
-//            }
-            doStartCall();
+            if (mPeerConnection == null) {
+                mPeerConnection = createPeerConnection();
+            }
+//            doStartCall();
         }
 
         @Override

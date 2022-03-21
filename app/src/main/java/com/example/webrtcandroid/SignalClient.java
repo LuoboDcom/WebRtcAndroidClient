@@ -2,7 +2,6 @@ package com.example.webrtcandroid;
 
 import android.util.Log;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.net.URISyntaxException;
@@ -92,8 +91,7 @@ public class SignalClient {
         mSocket.on(Socket.EVENT_CONNECT_ERROR, new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                JSONObject jsonObject= (JSONObject) args[0];
-                Log.e(TAG, "onConnectError: " + jsonObject);
+                Log.e(TAG, "onConnectError: " + args);
             }
         });
 
