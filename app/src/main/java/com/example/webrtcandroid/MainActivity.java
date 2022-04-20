@@ -1,13 +1,16 @@
 package com.example.webrtcandroid;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.Manifest;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.EditText;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
+import androidx.appcompat.app.AppCompatActivity;
 import pub.devrel.easypermissions.EasyPermissions;
 
 public class MainActivity extends AppCompatActivity {
@@ -16,6 +19,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        EventBus.getDefault().register(this);
+        SignalManager.getInstance().connectSignal(this);
+        SignalManager.getInstance().listenSignalEvents();
         final EditText serverEditText = findViewById(R.id.ServerEditText);
         final EditText roomEditText = findViewById(R.id.RoomEditText);
         findViewById(R.id.JoinRoomBtn).setOnClickListener(new View.OnClickListener() {
@@ -37,6 +43,7 @@ public class MainActivity extends AppCompatActivity {
             EasyPermissions.requestPermissions(this, "Need permissions for camera & microphone", 0, perms);
         }
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -46,5 +53,11 @@ public class MainActivity extends AppCompatActivity {
 
     protected void onDestroy() {
         super.onDestroy();
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void handleEvent(SignalEvent event) {
+        startActivity(new Intent(this, JoinActivity.class));
     }
 }

@@ -4,4 +4,5 @@
     <string name="room_tips">Input room name: </string>
     <string name="server_tips">Input server addr: </string>
     <string name="default_server">https://www.ainiljing.vip</string>
+    <string name="default_room_number">111111</string>
 </resources>

@@ -39,17 +39,17 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-public class CallActivity extends AppCompatActivity {
-
+public class JoinActivity extends AppCompatActivity {
     private static final int VIDEO_RESOLUTION_WIDTH = 1280;
     private static final int VIDEO_RESOLUTION_HEIGHT = 720;
     private static final int VIDEO_FPS = 30;
 
     private String mState = "init";
 
-    private static final String TAG = "CallActivity";
+    private static final String TAG = "JoinActivity";
 
     public static final String VIDEO_TRACK_ID = "1";//"ARDAMSv0";
     public static final String AUDIO_TRACK_ID = "2";//"ARDAMSa0";
@@ -73,9 +73,9 @@ public class CallActivity extends AppCompatActivity {
     private VideoCapturer mVideoCapturer;
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_call);
+        setContentView(R.layout.activity_join);
         mRootEglBase = EglBase.create();
 
         mLocalSurfaceView = findViewById(R.id.LocalSurfaceView);
@@ -91,7 +91,6 @@ public class CallActivity extends AppCompatActivity {
         mRemoteSurfaceView.setMirror(true);
         mRemoteSurfaceView.setEnableHardwareScaler(true /* enabled */);
         mRemoteSurfaceView.setZOrderMediaOverlay(true);
-
         //创建 factory， pc是从factory里获得的
         mPeerConnectionFactory = createPeerConnectionFactory(this);
 
@@ -134,7 +133,6 @@ public class CallActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        doLeave();
         mLocalSurfaceView.release();
         mRemoteSurfaceView.release();
         mVideoCapturer.dispose();
@@ -142,150 +140,6 @@ public class CallActivity extends AppCompatActivity {
         PeerConnectionFactory.stopInternalTracingCapture();
         PeerConnectionFactory.shutdownInternalTracer();
         mPeerConnectionFactory.dispose();
-    }
-
-    public static class SimpleSdpObserver implements SdpObserver {
-        @Override
-        public void onCreateSuccess(SessionDescription sessionDescription) {
-            Log.i(TAG, "SdpObserver: onCreateSuccess !");
-            Log.i(TAG, "SdpObserver: SessionDescription !" + sessionDescription.description);
-        }
-
-        @Override
-        public void onSetSuccess() {
-            Log.i(TAG, "SdpObserver: onSetSuccess");
-        }
-
-        @Override
-        public void onCreateFailure(String msg) {
-            Log.e(TAG, "SdpObserver onCreateFailure: " + msg);
-        }
-
-        @Override
-        public void onSetFailure(String msg) {
-
-            Log.e(TAG, "SdpObserver onSetFailure: " + msg);
-        }
-    }
-
-    private void updateCallState(boolean idle) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (idle) {
-                    mRemoteSurfaceView.setVisibility(View.GONE);
-                } else {
-                    mRemoteSurfaceView.setVisibility(View.VISIBLE);
-                }
-            }
-        });
-    }
-
-    public void doStartCall() {
-        if (mPeerConnection == null) {
-            mPeerConnection = createPeerConnection();
-        }
-        MediaConstraints mediaConstraints = new MediaConstraints();
-        mediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
-        mediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
-        mediaConstraints.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
-        mPeerConnection.createOffer(new SimpleSdpObserver() {
-            @Override
-            public void onCreateSuccess(SessionDescription sessionDescription) {
-                Log.i(TAG, "Create local offer success: \n" + sessionDescription.description);
-                mPeerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
-                JSONObject message = new JSONObject();
-                try {
-                    message.put("type", "offer");
-                    message.put("sdp", sessionDescription.description);
-                    SignalManager.getInstance().sendMessage(message);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, mediaConstraints);
-    }
-
-    public void doLeave() {
-        hangup();
-        SignalManager.getInstance().leaveRoom();
-
-    }
-
-    public void doAnswerCall() {
-        if (mPeerConnection == null) {
-            mPeerConnection = createPeerConnection();
-        }
-
-        MediaConstraints sdpMediaConstraints = new MediaConstraints();
-        Log.i(TAG, "Create answer ...");
-        mPeerConnection.createAnswer(new SimpleSdpObserver() {
-            @Override
-            public void onCreateSuccess(SessionDescription sessionDescription) {
-                Log.i(TAG, "Create answer success :\n" + sessionDescription.description);
-                mPeerConnection.setLocalDescription(new SimpleSdpObserver(),
-                        sessionDescription);
-
-                JSONObject message = new JSONObject();
-                try {
-                    message.put("type", "answer");
-                    message.put("sdp", sessionDescription.description);
-                    SignalManager.getInstance().sendMessage(message);
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
-            }
-        }, sdpMediaConstraints);
-        updateCallState(false);
-    }
-
-    private void hangup() {
-        if (mPeerConnection == null) {
-            return;
-        }
-        mPeerConnection.close();
-        mPeerConnection = null;
-        updateCallState(true);
-    }
-
-    public PeerConnection createPeerConnection() {
-        Log.i(TAG, "Create PeerConnection ...");
-
-        LinkedList<PeerConnection.IceServer> iceServers = new LinkedList<PeerConnection.IceServer>();
-
-        PeerConnection.IceServer ice_server =
-                PeerConnection.IceServer.builder("turn:49.232.155.214:3478")
-                        .setPassword("mypasswd")
-                        .setUsername("terry")
-                        .createIceServer();
-
-        iceServers.add(ice_server);
-
-        PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
-        // TCP candidates are only useful when connecting to a server that supports
-        // ICE-TCP.
-        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
-        //rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
-        //rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
-        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
-        // Use ECDSA encryption.
-        //rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
-        // Enable DTLS for normal calls and disable for loopback calls.
-        rtcConfig.enableDtlsSrtp = true;
-        //rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN;
-        PeerConnection connection =
-                mPeerConnectionFactory.createPeerConnection(rtcConfig,
-                        mPeerConnectionObserver);
-        if (connection == null) {
-            Log.e(TAG, "Failed to createPeerConnection !");
-            return null;
-        }
-
-        List<String> mediaStreamLabels = Collections.singletonList("ARDAMS");
-        connection.addTrack(mVideoTrack, mediaStreamLabels);
-        connection.addTrack(mAudioTrack, mediaStreamLabels);
-
-        return connection;
     }
 
     public PeerConnectionFactory createPeerConnectionFactory(Context context) {
@@ -347,6 +201,45 @@ public class CallActivity extends AppCompatActivity {
         return null;
     }
 
+    public PeerConnection createPeerConnection() {
+        Log.i(TAG, "Create PeerConnection ...");
+
+        LinkedList<PeerConnection.IceServer> iceServers = new LinkedList<PeerConnection.IceServer>();
+
+        PeerConnection.IceServer ice_server =
+                PeerConnection.IceServer.builder("turn:49.232.155.214:3478")
+                        .setPassword("mypasswd")
+                        .setUsername("terry")
+                        .createIceServer();
+
+        iceServers.add(ice_server);
+
+        PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(iceServers);
+        // TCP candidates are only useful when connecting to a server that supports
+        // ICE-TCP.
+        rtcConfig.tcpCandidatePolicy = PeerConnection.TcpCandidatePolicy.DISABLED;
+        //rtcConfig.bundlePolicy = PeerConnection.BundlePolicy.MAXBUNDLE;
+        //rtcConfig.rtcpMuxPolicy = PeerConnection.RtcpMuxPolicy.REQUIRE;
+        rtcConfig.continualGatheringPolicy = PeerConnection.ContinualGatheringPolicy.GATHER_CONTINUALLY;
+        // Use ECDSA encryption.
+        //rtcConfig.keyType = PeerConnection.KeyType.ECDSA;
+        // Enable DTLS for normal calls and disable for loopback calls.
+        rtcConfig.enableDtlsSrtp = true;
+        //rtcConfig.sdpSemantics = PeerConnection.SdpSemantics.UNIFIED_PLAN;
+        PeerConnection connection =
+                mPeerConnectionFactory.createPeerConnection(rtcConfig,
+                        mPeerConnectionObserver);
+        if (connection == null) {
+            Log.e(TAG, "Failed to createPeerConnection !");
+            return null;
+        }
+
+        List<String> mediaStreamLabels = Collections.singletonList("ARDAMS");
+        connection.addTrack(mVideoTrack, mediaStreamLabels);
+        connection.addTrack(mAudioTrack, mediaStreamLabels);
+
+        return connection;
+    }
     private PeerConnection.Observer mPeerConnectionObserver = new PeerConnection.Observer() {
         @Override
         public void onSignalingChange(PeerConnection.SignalingState signalingState) {
@@ -424,7 +317,6 @@ public class CallActivity extends AppCompatActivity {
             }
         }
     };
-
     private SignalManager.OnSignalEventListener
             mOnSignalEventListener = new SignalManager.OnSignalEventListener() {
 
@@ -443,7 +335,6 @@ public class CallActivity extends AppCompatActivity {
         @Override
         public void onUserJoined(String roomName, String userID) {
             mState = "joined";
-            SignalManager.getInstance().invite();
             //这里应该创建PeerConnection
             if (mPeerConnection == null) {
                 mPeerConnection = createPeerConnection();
@@ -584,4 +475,105 @@ public class CallActivity extends AppCompatActivity {
         }
     };
 
+    public void doStartCall() {
+        if (mPeerConnection == null) {
+            mPeerConnection = createPeerConnection();
+        }
+        MediaConstraints mediaConstraints = new MediaConstraints();
+        mediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
+        mediaConstraints.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
+        mediaConstraints.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
+        mPeerConnection.createOffer(new SimpleSdpObserver() {
+            @Override
+            public void onCreateSuccess(SessionDescription sessionDescription) {
+                Log.i(TAG, "Create local offer success: \n" + sessionDescription.description);
+                mPeerConnection.setLocalDescription(new SimpleSdpObserver(), sessionDescription);
+                JSONObject message = new JSONObject();
+                try {
+                    message.put("type", "offer");
+                    message.put("sdp", sessionDescription.description);
+                    SignalManager.getInstance().sendMessage(message);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, mediaConstraints);
+    }
+
+    public void doLeave() {
+        hangup();
+        SignalManager.getInstance().leaveRoom();
+
+    }
+
+    public void doAnswerCall() {
+        if (mPeerConnection == null) {
+            mPeerConnection = createPeerConnection();
+        }
+
+        MediaConstraints sdpMediaConstraints = new MediaConstraints();
+        Log.i(TAG, "Create answer ...");
+        mPeerConnection.createAnswer(new SimpleSdpObserver() {
+            @Override
+            public void onCreateSuccess(SessionDescription sessionDescription) {
+                Log.i(TAG, "Create answer success :\n" + sessionDescription.description);
+                mPeerConnection.setLocalDescription(new SimpleSdpObserver(),
+                        sessionDescription);
+
+                JSONObject message = new JSONObject();
+                try {
+                    message.put("type", "answer");
+                    message.put("sdp", sessionDescription.description);
+                    SignalManager.getInstance().sendMessage(message);
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, sdpMediaConstraints);
+        updateCallState(false);
+    }
+
+    private void hangup() {
+        if (mPeerConnection == null) {
+            return;
+        }
+        mPeerConnection.close();
+        mPeerConnection = null;
+        updateCallState(true);
+    }
+    private void updateCallState(boolean idle) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (idle) {
+                    mRemoteSurfaceView.setVisibility(View.GONE);
+                } else {
+                    mRemoteSurfaceView.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+    }
+    public static class SimpleSdpObserver implements SdpObserver {
+        @Override
+        public void onCreateSuccess(SessionDescription sessionDescription) {
+            Log.i(TAG, "SdpObserver: onCreateSuccess !");
+            Log.i(TAG, "SdpObserver: SessionDescription !" + sessionDescription.description);
+        }
+
+        @Override
+        public void onSetSuccess() {
+            Log.i(TAG, "SdpObserver: onSetSuccess");
+        }
+
+        @Override
+        public void onCreateFailure(String msg) {
+            Log.e(TAG, "SdpObserver onCreateFailure: " + msg);
+        }
+
+        @Override
+        public void onSetFailure(String msg) {
+
+            Log.e(TAG, "SdpObserver onSetFailure: " + msg);
+        }
+    }
 }

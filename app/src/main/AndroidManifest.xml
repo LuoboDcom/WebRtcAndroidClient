@@ -33,6 +33,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".CallActivity" />
+        <activity android:name=".JoinActivity" />
     </application>
 
 </manifest>
