@@ -49,6 +49,9 @@ import java.util.concurrent.ExecutorService;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+/**
+ * 呼叫端
+ */
 public class CallActivity extends AppCompatActivity {
 
     private static final int VIDEO_RESOLUTION_WIDTH = 1280;

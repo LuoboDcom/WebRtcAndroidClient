@@ -49,6 +49,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+/**
+ * 被呼端
+ */
 public class JoinActivity extends AppCompatActivity {
     private static final int VIDEO_RESOLUTION_WIDTH = 1280;
     private static final int VIDEO_RESOLUTION_HEIGHT = 720;
@@ -158,8 +161,17 @@ public class JoinActivity extends AppCompatActivity {
         mVideoTrack = mPeerConnectionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
         mVideoTrack.setEnabled(true);
         mVideoTrack.addSink(mLocalSurfaceView);
-
-        AudioSource audioSource = mPeerConnectionFactory.createAudioSource(new MediaConstraints());
+        //语音
+        MediaConstraints audioConstraints = new MediaConstraints();
+        //回声消除
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googEchoCancellation", "true"));
+        //自动增益
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googAutoGainControl", "true"));
+        //高音过滤
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googHighpassFilter", "true"));
+        //噪音处理
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googNoiseSuppression", "true"));
+        AudioSource audioSource = mPeerConnectionFactory.createAudioSource(audioConstraints);
         mAudioTrack = mPeerConnectionFactory.createAudioTrack(AUDIO_TRACK_ID, audioSource);
         mAudioTrack.setEnabled(true);
 
