@@ -14,7 +14,7 @@ import io.socket.emitter.Emitter;
 
 public class SignalManager {
 
-    private static final String TAG = "SignalClient";
+    private static final String TAG = "SignalManager";
 
     private static SignalManager mInstance;
     private OnSignalEventListener mOnSignalEventListener;
@@ -86,8 +86,16 @@ public class SignalManager {
         }
 
         mSocket.emit("leave", mRoomName);
-        mSocket.close();
-        mSocket = null;
+    }
+
+    public void releaseSocket() {
+        if (mSocket != null) {
+            mSocket.off();
+            mSocket.disconnect();
+            mSocket.close();
+            mSocket = null;
+            EventBus.getDefault().post(new SignalEvent(SignalEvent.TYPE_DISCONNECT));
+        }
     }
 
     public void sendMessage(JSONObject message) {
@@ -125,6 +133,7 @@ public class SignalManager {
             public void call(Object... args) {
                 String sessionId = mSocket.id();
                 Log.i(TAG, "onConnected");
+                EventBus.getDefault().post(new SignalEvent(SignalEvent.TYPE_CONNECT));
                 if (mOnSignalEventListener != null) {
                     mOnSignalEventListener.onConnected();
                 }
@@ -145,6 +154,7 @@ public class SignalManager {
             @Override
             public void call(Object... args) {
                 Log.i(TAG, "onDisconnected");
+                EventBus.getDefault().post(new SignalEvent(SignalEvent.TYPE_DISCONNECT));
                 if (mOnSignalEventListener != null) {
                     mOnSignalEventListener.onDisconnected();
                 }
@@ -168,7 +178,8 @@ public class SignalManager {
         mSocket.on("invited", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                SignalEvent event = new SignalEvent();
+                Log.i(TAG, "invited");
+                SignalEvent event = new SignalEvent(SignalEvent.TYPE_JUMP);
                 EventBus.getDefault().post(event);
             }
         });
@@ -178,8 +189,7 @@ public class SignalManager {
             public void call(Object... args) {
                 String roomName = (String) args[0];
                 String userId = (String) args[1];
-                if (/*!mUserId.equals(userId) &&*/ mOnSignalEventListener != null) {
-                    //mOnSignalEventListener.onRemoteUserLeft(userId);
+                if (mOnSignalEventListener != null) {
                     mOnSignalEventListener.onUserLeaved(roomName, userId);
                 }
                 Log.i(TAG, "onUserLeaved, room:" + roomName + "uid:" + userId);
@@ -204,23 +214,17 @@ public class SignalManager {
             public void call(Object... args) {
                 String roomName = (String) args[0];
                 String userId = (String) args[1];
+                Log.i(TAG, "mOnSignalEventListener:" + mOnSignalEventListener);
                 if (mOnSignalEventListener != null) {
                     mOnSignalEventListener.onRemoteUserLeaved(roomName, userId);
                 }
                 Log.i(TAG, "onRemoteUserLeaved, room:" + roomName + "uid:" + userId);
-
             }
         });
 
         mSocket.on("full", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-
-                //释放资源
-                mSocket.disconnect();
-                mSocket.close();
-                mSocket = null;
-
                 String roomName = (String) args[0];
                 String userId = (String) args[1];
 
@@ -229,7 +233,6 @@ public class SignalManager {
                 }
 
                 Log.i(TAG, "onRoomFull, room:" + roomName + "uid:" + userId);
-
             }
         });
 
@@ -244,7 +247,6 @@ public class SignalManager {
                 }
 
                 Log.i(TAG, "onMessage, room:" + roomName + "data:" + msg);
-
             }
         });
     }
