@@ -174,8 +174,17 @@ public class CallActivity extends AppCompatActivity {
         mVideoTrack = mPeerConnectionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
         mVideoTrack.setEnabled(true);
         mVideoTrack.addSink(mLocalSurfaceView);
-
-        AudioSource audioSource = mPeerConnectionFactory.createAudioSource(new MediaConstraints());
+        //语音
+        MediaConstraints audioConstraints = new MediaConstraints();
+        //回声消除
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googEchoCancellation", "true"));
+        //自动增益
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googAutoGainControl", "true"));
+        //高音过滤
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googHighpassFilter", "true"));
+        //噪音处理
+        audioConstraints.mandatory.add(new MediaConstraints.KeyValuePair("googNoiseSuppression", "true"));
+        AudioSource audioSource = mPeerConnectionFactory.createAudioSource(audioConstraints);
         mAudioTrack = mPeerConnectionFactory.createAudioTrack(AUDIO_TRACK_ID, audioSource);
         mAudioTrack.setEnabled(true);
 
